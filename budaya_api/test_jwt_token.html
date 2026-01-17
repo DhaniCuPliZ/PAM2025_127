@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Login & JWT Token</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #C4332E;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #C4332E;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #a02923;
+        }
+
+        .response {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            border-left: 4px solid #C4332E;
+        }
+
+        .token-display {
+            background: #2d2d2d;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #2196F3;
+            margin-bottom: 20px;
+        }
+
+        .copy-btn {
+            background: #28a745;
+            padding: 8px 15px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔐 Test Login & JWT Token Generator</h1>
+
+        <div class="info">
+            <strong>ℹ️ Info:</strong> Gunakan tool ini untuk test login dan melihat JWT token yang di-generate.
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" value="admin@gmail.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" value="admin123" required>
+            </div>
+
+            <button type="submit">🔑 Login & Generate Token</button>
+        </form>
+
+        <div id="response" class="response" style="display: none;">
+            <h3>Response:</h3>
+            <div id="responseContent"></div>
+
+            <div id="tokenSection" style="display: none;">
+                <h3>🎫 JWT Token:</h3>
+                <div class="token-display" id="tokenDisplay"></div>
+                <button class="copy-btn" onclick="copyToken()">📋 Copy Token</button>
+
+                <h3 style="margin-top: 20px;">📊 Token Info:</h3>
+                <div id="tokenInfo"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentToken = '';
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('password', password);
+
+            try {
+                const response = await fetch('http://localhost:8080/budaya_nusantara/login.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                document.getElementById('response').style.display = 'block';
+
+                if (data.success) {
+                    currentToken = data.data.token;
+
+                    document.getElementById('responseContent').innerHTML = `
+                        <p class="success">✅ Login Berhasil!</p>
+                        <p><strong>Nama:</strong> ${data.data.nama}</p>
+                        <p><strong>Email:</strong> ${data.data.email}</p>
+                        <p><strong>Role:</strong> ${data.data.role}</p>
+                    `;
+
+                    document.getElementById('tokenDisplay').textContent = currentToken;
+                    document.getElementById('tokenSection').style.display = 'block';
+
+                    // Decode JWT token (simple base64 decode)
+                    try {
+                        const parts = currentToken.split('.');
+                        const header = JSON.parse(atob(parts[0]));
+                        const payload = JSON.parse(atob(parts[1]));
+
+                        const expDate = new Date(payload.exp * 1000);
+                        const iatDate = new Date(payload.iat * 1000);
+
+                        document.getElementById('tokenInfo').innerHTML = `
+                            <p><strong>User ID:</strong> ${payload.user_id}</p>
+                            <p><strong>Email:</strong> ${payload.email}</p>
+                            <p><strong>Role:</strong> ${payload.role}</p>
+                            <p><strong>Issued At:</strong> ${iatDate.toLocaleString('id-ID')}</p>
+                            <p><strong>Expires At:</strong> ${expDate.toLocaleString('id-ID')}</p>
+                            <p><strong>Valid For:</strong> 24 jam</p>
+                        `;
+                    } catch (e) {
+                        document.getElementById('tokenInfo').innerHTML = '<p class="error">Error decoding token</p>';
+                    }
+                } else {
+                    document.getElementById('responseContent').innerHTML = `
+                        <p class="error">❌ Login Gagal!</p>
+                        <p>${data.message}</p>
+                    `;
+                    document.getElementById('tokenSection').style.display = 'none';
+                }
+            } catch (error) {
+                document.getElementById('response').style.display = 'block';
+                document.getElementById('responseContent').innerHTML = `
+                    <p class="error">❌ Error: ${error.message}</p>
+                    <p>Pastikan XAMPP Apache sudah running dan API bisa diakses.</p>
+                `;
+                document.getElementById('tokenSection').style.display = 'none';
+            }
+        });
+
+        function copyToken() {
+            navigator.clipboard.writeText(currentToken).then(() => {
+                alert('✅ Token berhasil di-copy ke clipboard!');
+            }).catch(err => {
+                alert('❌ Gagal copy token: ' + err);
+            });
+        }
+    </script>
+</body>
+
+</html>
